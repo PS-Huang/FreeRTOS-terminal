@@ -1,6 +1,9 @@
-../Core/Src/shell_task.c:51:13:shell_write	1
-../Core/Src/shell_task.c:55:13:cmd_help	2
-../Core/Src/shell_task.c:64:13:cmd_echo	3
-../Core/Src/shell_task.c:73:13:cmd_status	1
-../Core/Src/shell_task.c:89:13:parse_and_execute	7
-../Core/Src/shell_task.c:117:6:ShellTask	6
+../Core/Src/shell_task.c:58:13:shell_write	1
+../Core/Src/shell_task.c:63:13:shell_log	2
+../Core/Src/shell_task.c:69:13:cmd_help	2
+../Core/Src/shell_task.c:78:13:cmd_echo	3
+../Core/Src/shell_task.c:87:13:cmd_status	1
+../Core/Src/shell_task.c:101:13:cmd_uptime	1
+../Core/Src/shell_task.c:118:13:cmd_log	3
+../Core/Src/shell_task.c:131:13:parse_and_execute	7
+../Core/Src/shell_task.c:159:6:ShellTask	6

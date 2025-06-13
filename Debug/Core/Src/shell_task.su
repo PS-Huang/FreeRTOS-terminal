@@ -1,6 +1,9 @@
-../Core/Src/shell_task.c:51:13:shell_write	16	static
-../Core/Src/shell_task.c:55:13:cmd_help	24	static
-../Core/Src/shell_task.c:64:13:cmd_echo	24	static
-../Core/Src/shell_task.c:73:13:cmd_status	2016	static
-../Core/Src/shell_task.c:89:13:parse_and_execute	72	static
-../Core/Src/shell_task.c:117:6:ShellTask	152	static
+../Core/Src/shell_task.c:58:13:shell_write	16	static
+../Core/Src/shell_task.c:63:13:shell_log	16	static
+../Core/Src/shell_task.c:69:13:cmd_help	24	static
+../Core/Src/shell_task.c:78:13:cmd_echo	24	static
+../Core/Src/shell_task.c:87:13:cmd_status	2016	static
+../Core/Src/shell_task.c:101:13:cmd_uptime	120	static
+../Core/Src/shell_task.c:118:13:cmd_log	16	static
+../Core/Src/shell_task.c:131:13:parse_and_execute	72	static
+../Core/Src/shell_task.c:159:6:ShellTask	152	static

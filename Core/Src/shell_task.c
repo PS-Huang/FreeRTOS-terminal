@@ -4,6 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "shell_task.h"
+#include "stdbool.h"
 
 extern UART_HandleTypeDef huart2;
 
@@ -30,16 +31,22 @@ static const char* shell_banner =
 		"Welcome to FreeShellRTOS !!! \r\n"
 		"Type 'help' to see available commands.\r\n";
 
+static bool log_enabled = false;
+
 // 指令列表
 static void cmd_help(int argc, char** argv);
 static void cmd_echo(int argc, char** argv);
 static void cmd_status(int argc, char** argv);
+static void cmd_log(int argc, char** argv);
+static void cmd_uptime(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
     {"help",     0, cmd_help,   "help                Show help"},
     {"echo",     1, cmd_echo,   "echo <text>         Echo text"},
-	{"status",   0, cmd_status, "status              Show task status"}
+	{"status",   0, cmd_status, "status              Show task status"},
+	{"uptime",   0, cmd_uptime, "uptime              Show system uptime"},
+    {"log",      1, cmd_log,    "log on/off          Enable or disable logging"}
     // {"led",      ...},
     // {"measure",  ...},
     // etc.
@@ -47,9 +54,16 @@ static const CLI_Command cli_commands[] = {
 
 #define CMD_COUNT (sizeof(cli_commands)/sizeof(cli_commands[0]))
 
-// 實作每個指令
+// 將吃到的字元返還
 static void shell_write(const char* s) {
     HAL_UART_Transmit(&huart2, (uint8_t*)s, strlen(s), HAL_MAX_DELAY);
+}
+
+// 將吃到的字元放入log
+static void shell_log(const char* s) {
+    if (log_enabled) {
+        HAL_UART_Transmit(&huart2, (uint8_t*)s, strlen(s), HAL_MAX_DELAY);
+    }
 }
 
 static void cmd_help(int argc, char** argv) {
@@ -84,6 +98,34 @@ static void cmd_status(int argc, char** argv) {
     shell_write(RunTimeBuffer);
 }
 
+static void cmd_uptime(int argc, char** argv) {
+    TickType_t ticks = xTaskGetTickCount(); // 取得系統經過的 ticks
+    uint32_t ms = ticks * portTICK_PERIOD_MS;
+
+    uint32_t seconds = ms / 1000;
+    uint32_t minutes = seconds / 60;
+    uint32_t hours   = minutes / 60;
+
+    seconds = seconds % 60;
+    minutes = minutes % 60;
+
+    char line[64];
+    snprintf(line, sizeof(line), "Uptime: %02lu:%02lu:%02lu (%lu ms)\r\n",
+             hours, minutes, seconds, ms);
+    shell_write(line);
+}
+
+static void cmd_log(int argc, char** argv) {
+    if (strcmp(argv[1], "on") == 0) {
+        log_enabled = true;
+        shell_write("Logging enabled\r\n");
+    } else if (strcmp(argv[1], "off") == 0) {
+        log_enabled = false;
+        shell_write("Logging disabled\r\n");
+    } else {
+        shell_write("Usage: log on / off\r\n");
+    }
+}
 
 // Parser function
 static void parse_and_execute(char* line) {

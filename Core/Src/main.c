@@ -61,6 +61,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 // UART TEST BEGIN
 //char rx_byte;
 
@@ -135,26 +136,6 @@ void LED_Task( void ){
 		vTaskDelay(500);
 	}
 }
-
-//UART_HandleTypeDef huart2;
-//void USART_Test(void *pvParameters){
-//	uint32_t Monitortimer = 400;
-//	char MonitorTset[30];
-//	char num[15];
-//	int i = 0;
-//	while(1){
-//		memset(MonitorTset,'\0',sizeof(MonitorTset));
-//		memset(num,'\0',sizeof(num));
-//		itoa(i,num,10);
-//		strcat(num," ");
-//		sprintf(MonitorTset,"The point is %s\n\r",num);
-//		HAL_UART_Transmit(&huart2,(uint8_t *)MonitorTset,strlen(MonitorTset),0xffff);
-//		vTaskDelay(Monitortimer);
-//		Monitortimer += 1;
-//		i += 1;
-//	}
-//}
-
 /* USER CODE END 0 */
 
 /**
