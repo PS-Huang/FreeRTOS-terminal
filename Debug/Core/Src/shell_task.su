@@ -1,0 +1,6 @@
+../Core/Src/shell_task.c:42:13:shell_write	16	static
+../Core/Src/shell_task.c:46:13:cmd_help	24	static
+../Core/Src/shell_task.c:55:13:cmd_echo	24	static
+../Core/Src/shell_task.c:64:13:cmd_status	2016	static
+../Core/Src/shell_task.c:80:13:parse_and_execute	72	static
+../Core/Src/shell_task.c:108:6:ShellTask	152	static
