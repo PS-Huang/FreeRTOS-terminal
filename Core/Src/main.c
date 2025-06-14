@@ -167,9 +167,16 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-//  xTaskCreate(USART_ReceiveTask, "UART_RX", 512, NULL, 1, NULL);
-  xTaskCreate(LED_Task, "LED", 128, NULL, 3, NULL);
-  xTaskCreate(ShellTask, "Shell", 1024, NULL, 2, NULL);
+  //xTaskCreate(LED_Task, "LED", 128, NULL, 3, NULL);
+  TaskHandle_t hLed;
+  if (xTaskCreate(LED_Task, "LED", 128, NULL, 3, &hLed) == pdPASS) {
+      RegisterUserTask(hLed, "LED", 128);
+  }
+  //xTaskCreate(ShellTask, "Shell", 1024, NULL, 2, NULL);
+  TaskHandle_t hShell;
+  xTaskCreate(ShellTask, "ShellTask", 1024, NULL, 2, &hShell);
+  RegisterUserTask(hShell, "ShellTask", 1024);
+
   vTaskStartScheduler();
   /* USER CODE END 2 */
 

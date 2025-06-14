@@ -17,6 +17,16 @@ typedef struct {
     const char* help;
 } CLI_Command;
 
+typedef struct {
+    TaskHandle_t handle;
+    char         name[16];
+    uint16_t     stackSize;        /* 建立任務時傳入的 usStackDepth  */
+} TaskInfo_t;
+
+#define MAX_USER_TASKS   16
+static TaskInfo_t g_taskTable[MAX_USER_TASKS];
+static UBaseType_t g_taskCount = 0;
+
 static const char* shell_banner =
 		"\r\n"
 		"=========================================================================\r\n"
@@ -39,6 +49,7 @@ static void cmd_echo(int argc, char** argv);
 static void cmd_status(int argc, char** argv);
 static void cmd_log(int argc, char** argv);
 static void cmd_uptime(int argc, char** argv);
+static void cmd_mem(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
@@ -46,7 +57,8 @@ static const CLI_Command cli_commands[] = {
     {"echo",     1, cmd_echo,   "echo <text>         Echo text"},
 	{"status",   0, cmd_status, "status              Show task status"},
 	{"uptime",   0, cmd_uptime, "uptime              Show system uptime"},
-    {"log",      1, cmd_log,    "log on/off          Enable or disable logging"}
+    {"log",      1, cmd_log,    "log on/off          Enable or disable logging"},
+    {"mem",      0, cmd_mem,    "mem                 Show memory and stack usage"}
     // {"led",      ...},
     // {"measure",  ...},
     // etc.
@@ -64,6 +76,26 @@ static void shell_log(const char* s) {
     if (log_enabled) {
         HAL_UART_Transmit(&huart2, (uint8_t*)s, strlen(s), HAL_MAX_DELAY);
     }
+}
+
+void RegisterUserTask(TaskHandle_t h, const char *name, uint16_t stackSize)
+{
+    if (g_taskCount < MAX_USER_TASKS) {
+        g_taskTable[g_taskCount].handle    = h;
+        strncpy(g_taskTable[g_taskCount].name, name, sizeof(g_taskTable[g_taskCount].name)-1);
+        g_taskTable[g_taskCount].stackSize = stackSize;
+        g_taskCount++;
+    }
+}
+
+static uint16_t findStackSize(TaskHandle_t h)
+{
+    for (UBaseType_t i = 0; i < g_taskCount; i++) {
+        if (g_taskTable[i].handle == h) {
+            return g_taskTable[i].stackSize;    // user-defined task
+        }
+    }
+    return 0;     // fallback
 }
 
 static void cmd_help(int argc, char** argv) {
@@ -125,6 +157,49 @@ static void cmd_log(int argc, char** argv) {
     } else {
         shell_write("Usage: log on / off\r\n");
     }
+}
+
+static void cmd_mem(int argc, char **argv)
+{
+    /* 先列出 Heap 資訊 … */
+	char line[128];
+	size_t heap_free = xPortGetFreeHeapSize();
+	size_t heap_min = xPortGetMinimumEverFreeHeapSize();
+	shell_write("\r\nMemory Summary:\r\n\r\n");
+
+	snprintf(line, sizeof(line), "    Heap Total Free      : %lu bytes\r\n", (unsigned long)heap_free);
+	shell_write(line);
+	snprintf(line, sizeof(line), "    Heap Min Ever Free   : %lu bytes\r\n\r\n", (unsigned long)heap_min);
+	shell_write(line);
+
+
+    UBaseType_t n = uxTaskGetNumberOfTasks();
+    TaskStatus_t *tsArray = pvPortMalloc(n * sizeof(TaskStatus_t));
+    n = uxTaskGetSystemState(tsArray, n, NULL);
+
+    shell_write("\r\nTask            Stack  Used Free            %%\r\n"
+                "--------------- ------ ---- ---- -------------\r\n");
+
+    char buf[96];
+    for (UBaseType_t i = 0; i < n; i++) {
+        TaskStatus_t *t = &tsArray[i];
+        uint16_t total = findStackSize(t->xHandle);
+        uint16_t free  = t->usStackHighWaterMark;
+        uint16_t used  = total - free;
+        uint8_t  pct   = (used * 100UL) / total;
+
+        if(total == 0){
+        	snprintf(buf, sizeof(buf), "%-15s %5s  %4s %4u %13s\r\n",
+        	        	                 t->pcTaskName, "N/A","N/A", free, "system task");
+        	        	        shell_write(buf);
+        }
+        else{
+        	 snprintf(buf, sizeof(buf), "%-15s %5u  %4u %4u %12u%%\r\n",
+        	                 t->pcTaskName, total, used, free, pct);
+        	        shell_write(buf);
+        }
+    }
+    vPortFree(tsArray);
 }
 
 // Parser function
