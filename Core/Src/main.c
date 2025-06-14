@@ -168,14 +168,18 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   //xTaskCreate(LED_Task, "LED", 128, NULL, 3, NULL);
+
+
+  // 重要！！在創建task時請依照下方格式將task的創見細節存入task table(直接call RegisterUserTask())，否則mem抓不到
   TaskHandle_t hLed;
   if (xTaskCreate(LED_Task, "LED", 128, NULL, 3, &hLed) == pdPASS) {
       RegisterUserTask(hLed, "LED", 128);
   }
-  //xTaskCreate(ShellTask, "Shell", 1024, NULL, 2, NULL);
+
   TaskHandle_t hShell;
-  xTaskCreate(ShellTask, "ShellTask", 1024, NULL, 2, &hShell);
-  RegisterUserTask(hShell, "ShellTask", 1024);
+  if(xTaskCreate(ShellTask, "ShellTask", 1024, NULL, 2, &hShell) == pdPASS){
+	  RegisterUserTask(hShell, "ShellTask", 1024);
+  }
 
   vTaskStartScheduler();
   /* USER CODE END 2 */
