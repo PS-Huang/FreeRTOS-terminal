@@ -5,10 +5,15 @@
 #include "task.h"
 #include "shell_task.h"
 #include "stdbool.h"
+#include "queue.h"
+#include "stdarg.h"
 
 extern UART_HandleTypeDef huart2;
 
 #define MAX_CMD_LEN 128
+
+#define LOG_LINE_MAX     96
+#define LOG_RING_SIZE    128
 
 typedef struct {
     const char* name;
@@ -41,7 +46,11 @@ static const char* shell_banner =
 		"Welcome to FreeShellRTOS !!! \r\n"
 		"Type 'help' to see available commands.\r\n";
 
-static bool log_enabled = false;
+QueueHandle_t xLogQueue     = NULL;            // queue handle
+static LogMsg_t      g_ring[LOG_RING_SIZE];
+static uint16_t      g_head = 0;                      // 下一寫入位置
+static uint16_t      g_count = 0;                     // 目前已存行數
+static bool          g_logEnabled = false;            // log on/off
 
 // 指令列表
 static void cmd_help(int argc, char** argv);
@@ -53,12 +62,12 @@ static void cmd_mem(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
-    {"help",     0, cmd_help,   "help                Show help"},
-    {"echo",     1, cmd_echo,   "echo <text>         Echo text"},
-	{"status",   0, cmd_status, "status              Show task status"},
-	{"uptime",   0, cmd_uptime, "uptime              Show system uptime"},
-    {"log",      1, cmd_log,    "log on/off          Enable or disable logging"},
-    {"mem",      0, cmd_mem,    "mem                 Show memory and stack usage"}
+    {"help",     0, cmd_help,   "help                    Show help"},
+    {"echo",     1, cmd_echo,   "echo <text>             Echo text"},
+	{"status",   0, cmd_status, "status                  Show task status"},
+	{"uptime",   0, cmd_uptime, "uptime                  Show system uptime"},
+	{"log",      1, cmd_log,    "log on | off | dump     logger control"},
+    {"mem",      0, cmd_mem,    "mem                     Show memory and stack usage"}
     // {"led",      ...},
     // {"measure",  ...},
     // etc.
@@ -69,12 +78,36 @@ static const CLI_Command cli_commands[] = {
 // 將吃到的字元返還
 static void shell_write(const char* s) {
     HAL_UART_Transmit(&huart2, (uint8_t*)s, strlen(s), HAL_MAX_DELAY);
+
+    if (g_logEnabled && xLogQueue) {
+		LogMsg_t m;
+		strncpy(m.text, s, LOG_LINE_MAX - 1);
+		m.text[LOG_LINE_MAX-1] = '\0';
+		xQueueSend(xLogQueue, &m, 0);
+	}
 }
 
-// 將吃到的字元放入log
-static void shell_log(const char* s) {
-    if (log_enabled) {
-        HAL_UART_Transmit(&huart2, (uint8_t*)s, strlen(s), HAL_MAX_DELAY);
+void log_printf(const char *fmt, ...)
+{
+    if (!g_logEnabled || !xLogQueue) return;
+    LogMsg_t m;
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(m.text, LOG_LINE_MAX, fmt, ap);
+    va_end(ap);
+    xQueueSend(xLogQueue, &m, 0);
+}
+
+void LoggerTask(void *param)
+{
+    LogMsg_t m;
+    for (;;) {
+        if (xQueueReceive(xLogQueue, &m, portMAX_DELAY) == pdPASS) {
+            // 寫進環形緩衝區
+            memcpy(&g_ring[g_head], &m, sizeof(LogMsg_t));
+            g_head  = (g_head + 1) % LOG_RING_SIZE;
+            if (g_count < LOG_RING_SIZE) g_count++;
+        }
     }
 }
 
@@ -147,15 +180,26 @@ static void cmd_uptime(int argc, char** argv) {
     shell_write(line);
 }
 
-static void cmd_log(int argc, char** argv) {
+static void cmd_log(int argc, char **argv)
+{
+    if (argc < 2) { shell_write("Usage: log on|off|dump\r\n"); return; }
+
     if (strcmp(argv[1], "on") == 0) {
-        log_enabled = true;
-        shell_write("Logging enabled\r\n");
+        g_logEnabled = true;
+        shell_write("Log ON\r\n");
     } else if (strcmp(argv[1], "off") == 0) {
-        log_enabled = false;
-        shell_write("Logging disabled\r\n");
+        g_logEnabled = false;
+        shell_write("Log OFF\r\n");
+    } else if (strcmp(argv[1], "dump") == 0) {
+        shell_write("=== Log Dump Start ===\r\n");
+        uint16_t start = (g_head + LOG_RING_SIZE - g_count) % LOG_RING_SIZE;
+        for (uint16_t i = 0; i < g_count; i++) {
+            uint16_t idx = (start + i) % LOG_RING_SIZE;
+            shell_write(g_ring[idx].text);
+        }
+        shell_write("===  Log Dump End  ===\r\n");
     } else {
-        shell_write("Usage: log on / off\r\n");
+        shell_write("Usage: log on | off | dump\r\n");
     }
 }
 
@@ -206,6 +250,9 @@ static void cmd_mem(int argc, char **argv)
 static void parse_and_execute(char* line) {
     char* argv[10];
     int argc = 0;
+
+    log_printf(">>> %s\r\n", line);
+
     char* p = strtok(line, " ");
     while (p && argc < 10) {
         argv[argc++] = p;

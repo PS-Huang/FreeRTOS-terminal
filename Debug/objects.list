@@ -1,4 +1,3 @@
-"./Core/Src/log.o"
 "./Core/Src/main.o"
 "./Core/Src/shell_task.o"
 "./Core/Src/stm32f4xx_hal_msp.o"

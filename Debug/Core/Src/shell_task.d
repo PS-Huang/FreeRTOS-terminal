@@ -36,7 +36,9 @@ Core/Src/shell_task.o: ../Core/Src/shell_task.c ../Core/Inc/main.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/mpu_wrappers.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/list.h \
- ../Core/Inc/shell_task.h
+ ../Core/Inc/shell_task.h \
+ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/queue.h \
+ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -76,3 +78,5 @@ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h:
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/list.h:
 ../Core/Inc/shell_task.h:
+C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/queue.h:
+C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h:

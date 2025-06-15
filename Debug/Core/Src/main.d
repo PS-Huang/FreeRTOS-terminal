@@ -35,8 +35,10 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/deprecated_definitions.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/portable/ARM_CM4F/portmacro.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/mpu_wrappers.h \
+ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/queue.h \
  C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h \
- C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/list.h
+ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/list.h \
+ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -74,5 +76,7 @@ C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/deprecated_definitions.h:
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/portable/ARM_CM4F/portmacro.h:
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/mpu_wrappers.h:
+C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/queue.h:
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h:
 C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/list.h:
+C:/Users/P76134139/STM32CubeIDE/workspace_1.17.0/final_project/FreeRTOS/include/task.h:
