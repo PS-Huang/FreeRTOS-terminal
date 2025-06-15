@@ -14,6 +14,8 @@ extern UART_HandleTypeDef huart2;
 
 #define LOG_LINE_MAX     96
 #define LOG_RING_SIZE    128
+#define EXTERNAL_TASK_COUNT (sizeof(external_tasks)/sizeof(external_tasks[0]))
+#define MAX_USER_TASKS   16
 
 typedef struct {
     const char* name;
@@ -28,7 +30,13 @@ typedef struct {
     uint16_t     stackSize;        /* 建立任務時傳入的 usStackDepth  */
 } TaskInfo_t;
 
-#define MAX_USER_TASKS   16
+typedef struct {
+    const char* name;
+    TaskFunction_t task_entry;
+    uint16_t stack_size;
+    UBaseType_t priority;
+} ExternalTaskEntry;
+
 static TaskInfo_t g_taskTable[MAX_USER_TASKS];
 static UBaseType_t g_taskCount = 0;
 
@@ -59,15 +67,17 @@ static void cmd_status(int argc, char** argv);
 static void cmd_log(int argc, char** argv);
 static void cmd_uptime(int argc, char** argv);
 static void cmd_mem(int argc, char** argv);
+static void cmd_ext(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
-    {"help",     0, cmd_help,   "help                    Show help"},
-    {"echo",     1, cmd_echo,   "echo <text>             Echo text"},
-	{"status",   0, cmd_status, "status                  Show task status"},
-	{"uptime",   0, cmd_uptime, "uptime                  Show system uptime"},
-	{"log",      1, cmd_log,    "log on | off | dump     logger control"},
-    {"mem",      0, cmd_mem,    "mem                     Show memory and stack usage"}
+    {"help",     0, cmd_help,   	"help                    Show help"},
+    {"echo",     1, cmd_echo,   	"echo <text>             Echo text"},
+	{"status",   0, cmd_status, 	"status                  Show task status"},
+	{"uptime",   0, cmd_uptime, 	"uptime                  Show system uptime"},
+	{"log",      1, cmd_log,    	"log on | off | dump     logger control"},
+    {"mem",      0, cmd_mem,    	"mem                     Show memory and stack usage"},
+    {"run", 	 2, cmd_ext, 		"run task <name>		 Enter run task ext1, and the task ExternalTask1 will be created"}
     // {"led",      ...},
     // {"measure",  ...},
     // etc.
@@ -303,4 +313,55 @@ void ShellTask(void* argument) {
             }
         }
     }
+}
+
+TaskHandle_t ext1_handle = NULL;
+
+void ExternalTask1(void* arg) {
+    shell_write("[ext1] Task started\r\n");
+    while (1) {
+        // 模擬任務行為
+        shell_write("[ext1] Doing some work...\r\n");
+        vTaskDelay(pdMS_TO_TICKS(2000));  // 模擬 2 秒工作
+
+        // 進入睡眠，等待下一次 run 指令叫醒
+        shell_write("[ext1] Sleeping...\r\n");
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        shell_write("[ext1] Woke up again!\r\n");
+    }
+}
+
+
+
+static const ExternalTaskEntry external_tasks[] = {
+    { "ext1", ExternalTask1, 128, 2 },
+    // 你可以繼續擴充更多
+};
+
+extern TaskHandle_t ext1_handle;
+
+static void cmd_ext(int argc, char** argv) {
+    if (argc < 2) {
+        shell_write("Usage: run <task_name>\r\n");
+        return;
+    }
+
+    if (strcmp(argv[2], "ext1") == 0) {
+        if (ext1_handle == NULL) {
+            // 還沒創建，先建立它
+            if (xTaskCreate(ExternalTask1, "ext1", 256, NULL, 2, &ext1_handle) == pdPASS) {
+                shell_write("Task ext1 created and running...\r\n");
+            } else {
+                shell_write("Failed to create task ext1\r\n");
+            }
+        } else {
+            // 已建立，只是睡著了 → 叫醒
+            shell_write("Task ext1 resumed...\r\n");
+            xTaskNotifyGive(ext1_handle);
+        }
+        return;
+    }
+
+    shell_write("Unknown task name\r\n");
 }

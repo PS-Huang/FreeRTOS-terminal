@@ -179,7 +179,8 @@ int main(void)
 
   TaskHandle_t hShell;
   if(xTaskCreate(ShellTask, "ShellTask", 4096, NULL, 2, &hShell) == pdPASS){
-	  RegisterUserTask(hShell, "ShellTask", 4096);
+	  RegisterUserTask(hShell, "ShellTask", 4096
+			  );
   }
 
   xLogQueue = xQueueCreate(16, sizeof(LogMsg_t));
