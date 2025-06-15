@@ -351,6 +351,7 @@ static void cmd_ext(int argc, char** argv) {
         if (ext1_handle == NULL) {
             // 還沒創建，先建立它
             if (xTaskCreate(ExternalTask1, "ext1", 256, NULL, 2, &ext1_handle) == pdPASS) {
+            	RegisterUserTask(ext1_handle, "Logger", 256);
                 shell_write("Task ext1 created and running...\r\n");
             } else {
                 shell_write("Failed to create task ext1\r\n");
