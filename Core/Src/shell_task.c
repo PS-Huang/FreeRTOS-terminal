@@ -307,6 +307,11 @@ void ShellTask(void* argument) {
                 parse_and_execute(buf);
                 shell_write("FreeShellRTOS:/$ ");
                 idx = 0;
+            } else if (ch == '\b' || ch == 0x7F) { 
+                if (idx > 0) {
+                    idx--;
+                    shell_write("\b \b"); // 在終端機上刪除字元邏輯: 後退, 覆蓋為空格, 再後退
+                }
             } else if (idx < (int)sizeof(buf) - 1 && ch >= 32 && ch <= 126) {
                 buf[idx++] = ch;
                 HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
