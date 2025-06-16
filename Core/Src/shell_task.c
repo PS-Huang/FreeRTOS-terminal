@@ -68,6 +68,7 @@ static void cmd_log(int argc, char** argv);
 static void cmd_uptime(int argc, char** argv);
 static void cmd_mem(int argc, char** argv);
 static void cmd_ext(int argc, char** argv);
+static void cmd_led(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
@@ -77,8 +78,8 @@ static const CLI_Command cli_commands[] = {
 	{"uptime",   0, cmd_uptime, 	"uptime                  Show system uptime"},
 	{"log",      1, cmd_log,    	"log on | off | dump     logger control"},
     {"mem",      0, cmd_mem,    	"mem                     Show memory and stack usage"},
-    {"run", 	 2, cmd_ext, 		"run task <name>		 Enter run task ext1, and the task ExternalTask1 will be created"}
-    // {"led",      ...},
+    {"run", 	 2, cmd_ext, 		"run task <name>         Enter run task ext1, and the task ExternalTask1 will be created"},
+    {"led",      1, cmd_led,        "led -<color> [on|off]   Control LED (color: red, blue, green, orange)"}
     // {"measure",  ...},
     // etc.
 };
@@ -370,4 +371,47 @@ static void cmd_ext(int argc, char** argv) {
     }
 
     shell_write("Unknown task name\r\n");
+}
+
+static void control_single_led(const char* color_name, uint16_t GPIO_Pin, bool turn_on) {
+    HAL_GPIO_WritePin(GPIOD, GPIO_Pin, turn_on ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    char msg[64];
+    snprintf(msg, sizeof(msg),"%s LED turned %s.\r\n", color_name, turn_on ? "ON" : "OFF");
+    shell_write(msg);
+}
+
+static void cmd_led(int argc, char** argv) {
+    bool turn_on = true;
+    if (argc < 2) {
+        shell_write("Usage: led -<color> [on|off]\r\n");
+        shell_write("Colors: -red, -blue, -green, -orange\r\n");
+        return;
+    }
+
+    if (argc == 3) {
+        if (strcmp(argv[2], "on") == 0) {
+            turn_on = true;
+        } else if (strcmp(argv[2], "off") == 0) {
+            turn_on = false;
+        } else {
+            shell_write("Invalid state argument. Use 'on' or 'off'.\r\n");
+            return;
+        }
+    } else if (argc > 3) {
+        shell_write("Too many arguments.\r\n");
+        shell_write("Usage: led -<color> [on|off]\r\n");
+        return;
+    }
+
+    if (strcmp(argv[1], "-green") == 0) {
+        control_single_led("Green", GPIO_PIN_12, turn_on);
+    } else if (strcmp(argv[1], "-orange") == 0) {
+        control_single_led("Orange", GPIO_PIN_13, turn_on);
+    } else if (strcmp(argv[1], "-red") == 0) {
+        control_single_led("Red", GPIO_PIN_14, turn_on);
+    } else if (strcmp(argv[1], "-blue") == 0) {
+        control_single_led("Blue", GPIO_PIN_15, turn_on);
+    } else {
+        shell_write("Unknown LED color. Use -green, -orange, -red, or -blue.\r\n");
+    }
 }
