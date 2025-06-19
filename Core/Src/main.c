@@ -172,15 +172,14 @@ int main(void)
 
 
   // 重要！！在創建task時請依照下方格式將task的創見細節存入task table(直接call RegisterUserTask())，否則mem抓不到
-  TaskHandle_t hLed;
-  if (xTaskCreate(LED_Task, "LED", 128, NULL, 3, &hLed) == pdPASS){
-      RegisterUserTask(hLed, "LED", 128);
-  }
+//  TaskHandle_t hLed;
+//  if (xTaskCreate(LED_Task, "LED", 128, NULL, 3, &hLed) == pdPASS){
+//      RegisterUserTask(hLed, "LED", 128);
+//  }
 
   TaskHandle_t hShell;
   if(xTaskCreate(ShellTask, "ShellTask", 4096, NULL, 2, &hShell) == pdPASS){
-	  RegisterUserTask(hShell, "ShellTask", 4096
-			  );
+	  RegisterUserTask(hShell, "ShellTask", 4096);
   }
 
   xLogQueue = xQueueCreate(16, sizeof(LogMsg_t));

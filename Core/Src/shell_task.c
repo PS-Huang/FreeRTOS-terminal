@@ -17,6 +17,11 @@ extern UART_HandleTypeDef huart2;
 #define EXTERNAL_TASK_COUNT (sizeof(external_tasks)/sizeof(external_tasks[0]))
 #define MAX_USER_TASKS   16
 
+#define ANSI_CLEAR_SCREEN   "\x1B[2J" // 清除整個螢幕
+#define ANSI_CURSOR_HOME    "\x1B[H"  // 移動游標到左上角 (1,1)
+#define ANSI_CURSOR_FORWARD "\x1B[C"  // 游標前進一格
+#define ANSI_CURSOR_BACK    "\x1B[D"  // 游標後退一格
+
 typedef struct {
     const char* name;
     int argc_min;
@@ -36,6 +41,12 @@ typedef struct {
     uint16_t stack_size;
     UBaseType_t priority;
 } ExternalTaskEntry;
+
+typedef enum {
+    NORMAL,
+    GOT_ESC,
+    GOT_BRACKET
+} ReceiveState_t;
 
 static TaskInfo_t g_taskTable[MAX_USER_TASKS];
 static UBaseType_t g_taskCount = 0;
@@ -69,6 +80,7 @@ static void cmd_uptime(int argc, char** argv);
 static void cmd_mem(int argc, char** argv);
 static void cmd_ext(int argc, char** argv);
 static void cmd_led(int argc, char** argv);
+static void cmd_clear(int argc, char** argv);
 // 新增 cmd_led, cmd_measure...
 
 static const CLI_Command cli_commands[] = {
@@ -79,7 +91,8 @@ static const CLI_Command cli_commands[] = {
 	{"log",      1, cmd_log,    	"log on | off | dump     logger control"},
     {"mem",      0, cmd_mem,    	"mem                     Show memory and stack usage"},
     {"run", 	 2, cmd_ext, 		"run task <name>         Enter run task ext1, and the task ExternalTask1 will be created"},
-    {"led",      1, cmd_led,        "led -<color> [on|off]   Control LED (color: red, blue, green, orange)"}
+    {"led",      1, cmd_led,        "led -<color> [on|off]   Control LED (color: red, blue, green, orange)"},
+    {"clear",    0, cmd_clear,      "clear                   Clear all the terminal message on the screen"}
     // {"measure",  ...},
     // etc.
 };
@@ -257,10 +270,49 @@ static void cmd_mem(int argc, char **argv)
     vPortFree(tsArray);
 }
 
+// command 歷史記錄
+static CommandHistory_t cmd_history;
+
+static void history_init(CommandHistory_t *history) {
+    history->head = 0;
+    history->count = 0;
+    memset(history->commands, 0, sizeof(history->commands));
+}
+
+static void history_add(CommandHistory_t *history, const char *command) {
+    if (strlen(command) == 0) return;
+
+    // 檢查是否與上一條命令相同
+    if (history->count > 0) {
+        int last_cmd_index = (history->head - 1 + COMMAND_HISTORY_SIZE) % COMMAND_HISTORY_SIZE;
+        if (strcmp(history->commands[last_cmd_index], command) == 0) {
+            return; // 相同則不加入
+        }
+    }
+
+    strncpy(history->commands[history->head], command, MAX_COMMAND_LENGTH - 1);
+    history->commands[history->head][MAX_COMMAND_LENGTH - 1] = '\0';
+    history->head = (history->head + 1) % COMMAND_HISTORY_SIZE;
+
+    if (history->count < COMMAND_HISTORY_SIZE) {
+        history->count++;
+    }
+}
+
+static const char* history_get(CommandHistory_t *history, int index) {
+    if (index < 0 || index >= history->count) {
+        return NULL;
+    }
+    int real_index = (history->head - 1 - index + COMMAND_HISTORY_SIZE) % COMMAND_HISTORY_SIZE;
+    return history->commands[real_index];
+}
+
 // Parser function
 static void parse_and_execute(char* line) {
     char* argv[10];
     int argc = 0;
+
+    history_add(&cmd_history, line);
 
     log_printf(">>> %s\r\n", line);
 
@@ -292,33 +344,108 @@ static void parse_and_execute(char* line) {
 void ShellTask(void* argument) {
     static const char* banner =
        "FreeShellRTOS:/$ ";  // 已經在這前面印 banner 的程式
+//    static const char* prompt = "FreeShellRTOS:/$ ";
 
     char buf[128];
     int idx = 0;
     char ch;
 
+    ReceiveState_t state = NORMAL;
+	int history_idx = -1; // -1 表示不在瀏覽模式
+	history_init(&cmd_history);
+
+	int cursor_pos = 0; // 光標位置
+
     shell_write(shell_banner);
     shell_write(banner);
 
     while (1) {
-        if (HAL_UART_Receive(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY) == HAL_OK) {
-            if (ch == '\r') {
-                buf[idx] = '\0';
-                shell_write("\r\n");
-                parse_and_execute(buf);
-                shell_write("FreeShellRTOS:/$ ");
-                idx = 0;
-            } else if (ch == '\b' || ch == 0x7F) { 
-                if (idx > 0) {
-                    idx--;
-                    shell_write("\b \b"); // 在終端機上刪除字元邏輯: 後退, 覆蓋為空格, 再後退
+            if (HAL_UART_Receive(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY) == HAL_OK) {
+
+                // 狀態機開始
+                if (state == NORMAL) {
+                    if (ch == 0x1B) { // ESC
+                        state = GOT_ESC;
+                        continue;
+                    }
+                } else if (state == GOT_ESC) {
+                    state = (ch == '[') ? GOT_BRACKET : NORMAL;
+                    continue;
+                } else if (state == GOT_BRACKET) {
+                    state = NORMAL;
+                    switch (ch) {
+                        case 'A': // Up arrow
+                            if (history_idx < cmd_history.count - 1) history_idx++;
+                            break;
+                        case 'B': // Down arrow
+                            if (history_idx > -1) history_idx--;
+                            break;
+                        case 'C': // Right arrow
+                            if (cursor_pos < idx) {
+                                cursor_pos++;
+                                shell_write(ANSI_CURSOR_FORWARD);
+                            }
+                            continue;
+                        case 'D': // Left arrow
+                            if (cursor_pos > 0) {
+                                cursor_pos--;
+                                shell_write(ANSI_CURSOR_BACK);
+                            }
+                            continue;
+                        default:
+                            continue;
+                    }
+
+                    // 清除當前行
+                    for(int i=0; i < idx; i++) {
+                        shell_write("\b \b");
+                    }
+
+                    if (history_idx != -1) {
+                        const char* old_cmd = history_get(&cmd_history, history_idx);
+                        strncpy(buf, old_cmd, sizeof(buf));
+                        idx = strlen(buf);
+                        cursor_pos = idx; // 游標移動到結尾
+                        shell_write(buf);
+                    } else {
+                        // 回到新命令輸入狀態
+                        idx = 0;
+                        buf[0] = '\0';
+                    }
+                    continue;
                 }
-            } else if (idx < (int)sizeof(buf) - 1 && ch >= 32 && ch <= 126) {
-                buf[idx++] = ch;
-                HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+                // 狀態機結束
+
+                // --- 正常字元處理 ---
+                if (history_idx != -1) {
+                    // 如果在瀏覽歷史時輸入了任何正常字元，就退出瀏覽模式
+                    // 並將當前歷史命令作為基礎開始編輯
+                    history_idx = -1;
+                }
+
+                if (ch == '\r') {
+                    buf[idx] = '\0';
+                    shell_write("\r\n");
+                    if(idx > 0) {
+                        // 建立一個副本來執行，因為 strtok 會修改字串
+                        char line_copy[MAX_COMMAND_LENGTH];
+                        strncpy(line_copy, buf, sizeof(line_copy));
+                        parse_and_execute(line_copy);
+                    }
+                    shell_write(banner);
+                    idx = 0;
+                    history_idx = -1; // 執行後重置歷史瀏覽
+                } else if (ch == '\b' || ch == 0x7F) { // Backspace
+                    if (idx > 0) {
+                        idx--;
+                        shell_write("\b \b");
+                    }
+                } else if (idx < (int)sizeof(buf) - 1 && ch >= 32 && ch <= 126) {
+                    buf[idx++] = ch;
+                    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+                }
             }
         }
-    }
 }
 
 TaskHandle_t ext1_handle = NULL;
@@ -415,3 +542,11 @@ static void cmd_led(int argc, char** argv) {
         shell_write("Unknown LED color. Use -green, -orange, -red, or -blue.\r\n");
     }
 }
+
+static cmd_clear (int argc, char** argv) {
+    // ESC 的 ASCII 值 0x1B
+    const char * clear_sequence = "\x1B[H\x1B[2J";  // ESC[H (光標歸位)  + ESC[2J  (清除螢幕)
+    shell_write(clear_sequence);
+}
+
+// shell_task.c

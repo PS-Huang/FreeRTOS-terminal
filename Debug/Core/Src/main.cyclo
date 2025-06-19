@@ -2,9 +2,9 @@
 ../Core/Src/main.c:80:10:AppTimerStatsValue	1
 ../Core/Src/main.c:84:6:USART_ReceiveTask	5
 ../Core/Src/main.c:130:6:LED_Task	1
-../Core/Src/main.c:146:5:main	4
-../Core/Src/main.c:212:6:SystemClock_Config	3
-../Core/Src/main.c:259:13:MX_USART2_UART_Init	2
-../Core/Src/main.c:292:13:MX_GPIO_Init	1
-../Core/Src/main.c:441:6:HAL_TIM_PeriodElapsedCallback	3
-../Core/Src/main.c:459:6:Error_Handler	1
+../Core/Src/main.c:146:5:main	3
+../Core/Src/main.c:211:6:SystemClock_Config	3
+../Core/Src/main.c:258:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:291:13:MX_GPIO_Init	1
+../Core/Src/main.c:440:6:HAL_TIM_PeriodElapsedCallback	3
+../Core/Src/main.c:458:6:Error_Handler	1
